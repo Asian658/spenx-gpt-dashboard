@@ -374,11 +374,7 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
       const tokenTrend = [...state.tokenTrend.slice(1), Math.round(tokens / 1000)]
       const apiCallTrend = [...state.apiCallTrend.slice(1), 1]
 
-      const adminStats = state.adminStats.map((s) => {
-        if (s.key === 'account_balance') return { ...s, value: `$${newBalance.toFixed(2)}` }
-        if (s.key === 'monthly_cost') return { ...s, value: `$${monthlyData[monthIdx].cost.toFixed(2)}` }
-        return s
-      })
+      const adminStats = state.adminStats
 
       const dataCategories = state.dataCategories.map((c) => {
         if (c.name === 'API 日志') return { ...c, count: fmtNum(45200 + state.tickCount + 1) + ' 条', size: (156.8 + (state.tickCount + 1) * 0.002).toFixed(1) + ' MB' }
@@ -520,9 +516,6 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
         balance: newBalance,
         rechargeRecords: [{ id, date: fmtDate(), amount: action.amount, method: action.method, status: 'Completed' }, ...state.rechargeRecords],
         transactions: [{ id: id + 1, date: fmtDateTime().slice(0, 16), type: '充值', amount: action.amount, desc: action.method + '充值' }, ...state.transactions],
-        adminStats: state.adminStats.map((s) =>
-          s.key === 'account_balance' ? { ...s, value: `$${newBalance.toFixed(2)}` } : s
-        ),
       }
     }
 
@@ -602,6 +595,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveState(state)
   }, [state])
+
+  useEffect(() => {
+    const m = new Date().getMonth()
+    const monthlyCost = state.monthlyData[m]?.cost ?? 0
+    dispatch({ type: 'UPDATE_ADMIN_STAT', key: 'account_balance', value: `$${state.balance.toFixed(2)}` })
+    dispatch({ type: 'UPDATE_ADMIN_STAT', key: 'monthly_cost', value: `$${monthlyCost.toFixed(2)}` })
+  }, [state.balance, state.monthlyData])
 
   useEffect(() => {
     if (!state.isRealTimeActive) return
