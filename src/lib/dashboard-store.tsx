@@ -119,6 +119,8 @@ export type DashboardAction =
   | { type: 'UPDATE_RECHARGE_RECORD'; id: number; field: string; value: string }
   | { type: 'UPDATE_DATA_CATEGORY'; name: string; field: string; value: string }
   | { type: 'UPDATE_HOURLY_DATA'; index: number; value: number }
+  | { type: 'UPDATE_MODEL_USAGE'; model: string; field: string; value: string }
+  | { type: 'LOAD_STATE'; state: DashboardState }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -219,7 +221,7 @@ function createInitialState(): DashboardState {
 
   const adminStats: AdminStat[] = [
     { key: 'total_users', label: '总用户数', value: '128', editable: true },
-    { key: 'total_tokens', label: '总 Token 用量', value: fmtNum(1199156), editable: true },
+    { key: 'total_tokens', label: '总 tokens 用量', value: fmtNum(1199156), editable: true },
     { key: 'total_revenue', label: '总收入', value: '$12,450.00', editable: true },
     { key: 'active_models', label: '活跃模型数', value: '12', editable: true },
     { key: 'api_calls_today', label: '今日 API 调用', value: '7,137', editable: true },
@@ -443,6 +445,17 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
       return { ...state, hourlyData }
     }
 
+    case 'UPDATE_MODEL_USAGE':
+      return {
+        ...state,
+        modelUsage: state.modelUsage.map((m) =>
+          m.model === action.model ? { ...m, [action.field]: action.field === 'pct' ? parseInt(action.value) || 0 : action.value } : m
+        ),
+      }
+
+    case 'LOAD_STATE':
+      return action.state
+
     case 'ADD_RECHARGE': {
       const id = Date.now()
       return {
@@ -465,10 +478,32 @@ interface DashboardCtx {
   dispatch: Dispatch<DashboardAction>
 }
 
+const STORAGE_KEY = 'spenx-gpt-dashboard-state'
+
+function loadState(): DashboardState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return null
+}
+
+function saveState(state: DashboardState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch {}
+}
+
 const DashboardContext = createContext<DashboardCtx | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(dashboardReducer, undefined, createInitialState)
+  const [state, dispatch] = useReducer(dashboardReducer, undefined, () => {
+    return loadState() || createInitialState()
+  })
+
+  useEffect(() => {
+    saveState(state)
+  }, [state])
 
   useEffect(() => {
     if (!state.isRealTimeActive) return

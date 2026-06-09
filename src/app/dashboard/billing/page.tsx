@@ -3,11 +3,9 @@
 import { useState } from 'react'
 import { useDashboard } from '@/lib/dashboard-store'
 
-type Tab = 'consumption' | 'recharge'
-
 export default function BillingPage() {
   const { state } = useDashboard()
-  const [tab, setTab] = useState<Tab>('consumption')
+  const [tab, setTab] = useState<'consumption' | 'recharge'>('consumption')
 
   return (
     <div className="space-y-6">
@@ -17,20 +15,22 @@ export default function BillingPage() {
       </div>
 
       <div className="flex gap-1 bg-zinc-100 rounded-lg p-1 w-fit">
-        {([
-          ['consumption', '消费记录'],
-          ['recharge', '充值记录'],
-        ] as const).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        <button
+          onClick={() => setTab('consumption')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'consumption' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          消费记录
+        </button>
+        <button
+          onClick={() => setTab('recharge')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === 'recharge' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          充值记录
+        </button>
       </div>
 
       {tab === 'consumption' ? (

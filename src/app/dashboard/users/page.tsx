@@ -3,16 +3,71 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
-const initialUsers = [
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  status: string
+  created: string
+}
+
+const initialUsers: User[] = [
   { id: 1, name: 'Admin', email: 'admin@example.com', role: '管理员', status: 'active', created: '2026-01-15' },
   { id: 2, name: '张三', email: 'zhangsan@example.com', role: '用户', status: 'active', created: '2026-03-20' },
   { id: 3, name: '李四', email: 'lisi@example.com', role: '用户', status: 'active', created: '2026-04-10' },
   { id: 4, name: '王五', email: 'wangwu@example.com', role: '观察者', status: 'disabled', created: '2026-05-05' },
 ]
 
+function EditableCell({ value, onSave, options }: { value: string; onSave: (v: string) => void; options?: string[] }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  if (!editing) {
+    return (
+      <span
+        className="cursor-pointer hover:bg-amber-50 hover:text-amber-700 px-1 -mx-1 rounded transition-colors"
+        onClick={() => { setDraft(value); setEditing(true) }}
+        title="点击编辑"
+      >
+        {value}
+      </span>
+    )
+  }
+
+  if (options) {
+    return (
+      <select
+        value={draft}
+        onChange={(e) => { onSave(e.target.value); setEditing(false) }}
+        onBlur={() => setEditing(false)}
+        className="px-1 py-0.5 rounded border border-amber-300 text-sm bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        autoFocus
+      >
+        {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
+    )
+  }
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { onSave(draft); setEditing(false) }}
+      onKeyDown={(e) => { if (e.key === 'Enter') { onSave(draft); setEditing(false) } }}
+      className="px-1 py-0.5 rounded border border-amber-300 text-sm bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400 w-full"
+      autoFocus
+    />
+  )
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState(initialUsers)
   const [showAdd, setShowAdd] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editField, setEditField] = useState('')
+  const [editValue, setEditValue] = useState('')
   const [newUser, setNewUser] = useState({ name: '', email: '', role: '用户' })
 
   function handleAdd() {
@@ -36,12 +91,8 @@ export default function UsersPage() {
     setUsers(users.filter((u) => u.id !== id))
   }
 
-  function toggleStatus(id: number) {
-    setUsers(
-      users.map((u) =>
-        u.id === id ? { ...u, status: u.status === 'active' ? 'disabled' : 'active' } : u
-      )
-    )
+  function updateUser(id: number, field: string, value: string) {
+    setUsers(users.map((u) => (u.id === id ? { ...u, [field]: value } : u)))
   }
 
   return (
@@ -49,7 +100,7 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-zinc-900">用户管理</h1>
-          <p className="text-sm text-zinc-500 mt-1">管理系统用户和权限</p>
+          <p className="text-sm text-zinc-500 mt-1">管理系统用户和权限（点击数值直接编辑）</p>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
@@ -129,28 +180,29 @@ export default function UsersPage() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-b border-zinc-50 hover:bg-zinc-50/50">
-                <td className="py-3 px-5 text-zinc-900 font-medium">{user.name}</td>
-                <td className="py-3 px-5 text-zinc-600">{user.email}</td>
-                <td className="py-3 px-5">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    user.role === '管理员' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'
-                  }`}>
-                    {user.role}
-                  </span>
+                <td className="py-3 px-5 text-zinc-900 font-medium">
+                  <EditableCell value={user.name} onSave={(v) => updateUser(user.id, 'name', v)} />
+                </td>
+                <td className="py-3 px-5 text-zinc-600">
+                  <EditableCell value={user.email} onSave={(v) => updateUser(user.id, 'email', v)} />
                 </td>
                 <td className="py-3 px-5">
-                  <button
-                    onClick={() => toggleStatus(user.id)}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium cursor-pointer ${
-                      user.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-red-50 text-red-600'
-                    }`}
-                  >
-                    {user.status === 'active' ? '启用' : '禁用'}
-                  </button>
+                  <EditableCell
+                    value={user.role}
+                    onSave={(v) => updateUser(user.id, 'role', v)}
+                    options={['用户', '管理员', '观察者']}
+                  />
                 </td>
-                <td className="py-3 px-5 text-zinc-500">{user.created}</td>
+                <td className="py-3 px-5">
+                  <EditableCell
+                    value={user.status === 'active' ? '启用' : '禁用'}
+                    onSave={(v) => updateUser(user.id, 'status', v === '启用' ? 'active' : 'disabled')}
+                    options={['启用', '禁用']}
+                  />
+                </td>
+                <td className="py-3 px-5 text-zinc-500">
+                  <EditableCell value={user.created} onSave={(v) => updateUser(user.id, 'created', v)} />
+                </td>
                 <td className="py-3 px-5 text-right">
                   <button
                     onClick={() => handleDelete(user.id)}

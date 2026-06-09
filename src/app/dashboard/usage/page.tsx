@@ -18,7 +18,7 @@ export default function UsagePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-zinc-900">用量统计</h1>
-          <p className="text-sm text-zinc-500 mt-1">API Token 使用统计和分析</p>
+          <p className="text-sm text-zinc-500 mt-1">API tokens 使用统计和分析</p>
         </div>
         <select
           value={period}
@@ -32,7 +32,7 @@ export default function UsagePage() {
       </div>
 
       <div className="bg-white rounded-xl border border-zinc-200 p-5">
-        <h3 className="font-semibold text-zinc-900 text-sm mb-4">月度 Token 用量</h3>
+        <h3 className="font-semibold text-zinc-900 text-sm mb-4">月度 tokens 用量</h3>
         <div className="flex items-end gap-6 h-40 px-4">
           {state.monthlyData.map((m) => (
             <div key={m.label} className="flex-1 flex flex-col items-center gap-2">

@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-              月度 Token 上限
+              月度 tokens 上限
             </label>
             <input
               type="number"

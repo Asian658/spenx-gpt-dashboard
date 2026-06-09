@@ -99,11 +99,11 @@ export default function AdminPage() {
             实时 tick: <span className="text-zinc-900 font-mono font-bold">{state.tickCount}</span>
           </span>
           <button
-            onClick={() => dispatch({ type: 'BURST_TICKS', count: 10 })}
+            onClick={() => dispatch({ type: 'BURST_TICKS', count: 50 })}
             className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
           >
             <Zap className="w-3.5 h-3.5" />
-            随机生成 10 条数据
+            刷新
           </button>
           <button
             onClick={() => dispatch({ type: 'TOGGLE_REALTIME' })}
@@ -263,13 +263,10 @@ export default function AdminPage() {
             {state.modelUsage.map((m) => (
               <div key={m.model}>
                 <div className="flex justify-between text-xs mb-0.5">
-                  <span className="text-zinc-600">{m.model}</span>
+                  <EditableCell value={m.model} onSave={(v) => dispatch({ type: 'UPDATE_MODEL_USAGE', model: m.model, field: 'model', value: v })} className="text-zinc-600" />
                   <EditableCell
                     value={`${m.pct}%`}
-                    onSave={(v) => {
-                      const pct = parseInt(v) || 0
-                      dispatch({ type: 'UPDATE_ADMIN_STAT', key: 'model_pct_' + m.model, value: String(pct) })
-                    }}
+                    onSave={(v) => dispatch({ type: 'UPDATE_MODEL_USAGE', model: m.model, field: 'pct', value: v })}
                     className="text-zinc-400"
                   />
                 </div>

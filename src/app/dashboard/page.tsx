@@ -143,7 +143,7 @@ export default function DashboardPage() {
   const estDays = state.totalApiCalls > 0 ? Math.round(state.balance / (thisMonthCost / 30)) : 0
 
   const stats = [
-    { label: '本月 Token 用量', value: fmtNum(state.totalTokensUsed), change: `较上月 ${tokenChange >= 0 ? '+' : ''}${tokenChange.toFixed(1)}%`, up: tokenChange >= 0 },
+    { label: '本月 tokens 用量', value: fmtNum(state.totalTokensUsed), change: `较上月 ${tokenChange >= 0 ? '+' : ''}${tokenChange.toFixed(1)}%`, up: tokenChange >= 0 },
     { label: 'API 调用次数', value: fmtNum(state.totalApiCalls), change: `日均 ${fmtNum(dailyAvg)} 次`, up: true },
     { label: '账户余额', value: '$' + state.balance.toFixed(2), change: `预估可用 ${estDays} 天`, up: true },
     { label: '本月费用', value: '$' + thisMonthCost.toFixed(2), change: `较上月 ${costChange >= 0 ? '+' : ''}${costChange.toFixed(1)}%`, up: costChange <= 0 },
@@ -182,7 +182,7 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl border border-zinc-200 p-5">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-zinc-900 text-sm">Token 消耗趋势</h3>
+            <h3 className="font-semibold text-zinc-900 text-sm">tokens 消耗趋势</h3>
             <p className="text-xs text-zinc-400 mt-0.5">近 10 天</p>
           </div>
           <div className="flex items-center gap-4 text-xs text-zinc-400">
