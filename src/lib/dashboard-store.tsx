@@ -222,7 +222,8 @@ function createInitialState(): DashboardState {
   const adminStats: AdminStat[] = [
     { key: 'total_users', label: '总用户数', value: '128', editable: true },
     { key: 'total_tokens', label: '总 tokens 用量', value: fmtNum(1199156), editable: true },
-    { key: 'total_revenue', label: '总收入', value: '$12,450.00', editable: true },
+    { key: 'account_balance', label: '账户余额', value: '$2,448.27', editable: true },
+    { key: 'monthly_cost', label: '本月费用', value: '$35.97', editable: true },
     { key: 'active_models', label: '活跃模型数', value: '12', editable: true },
     { key: 'api_calls_today', label: '今日 API 调用', value: '7,137', editable: true },
     { key: 'avg_response_time', label: '平均响应时间', value: '320ms', editable: true },
@@ -307,7 +308,8 @@ function createEmptyState(): DashboardState {
     adminStats: [
       { key: 'total_users', label: '总用户数', value: '1', editable: true },
       { key: 'total_tokens', label: '总 tokens 用量', value: '0', editable: true },
-      { key: 'total_revenue', label: '总收入', value: '$0.00', editable: true },
+      { key: 'account_balance', label: '账户余额', value: '$0.00', editable: true },
+      { key: 'monthly_cost', label: '本月费用', value: '$0.00', editable: true },
       { key: 'active_models', label: '活跃模型数', value: '0', editable: true },
       { key: 'api_calls_today', label: '今日 API 调用', value: '0', editable: true },
       { key: 'avg_response_time', label: '平均响应时间', value: '0ms', editable: true },
@@ -374,6 +376,8 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
 
       const adminStats = state.adminStats.map((s) => {
         if (s.key === 'total_tokens') return { ...s, value: fmtNum(newTokens) }
+        if (s.key === 'account_balance') return { ...s, value: `$${newBalance.toFixed(2)}` }
+        if (s.key === 'monthly_cost') return { ...s, value: `$${monthlyData[monthIdx].cost.toFixed(2)}` }
         if (s.key === 'api_calls_today') return { ...s, value: fmtNum(newCalls) }
         if (s.key === 'active_models') return { ...s, value: String(modelUsage.filter((m) => m.tokens > 0).length) }
         return s
@@ -513,11 +517,15 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
 
     case 'ADD_RECHARGE': {
       const id = Date.now()
+      const newBalance = Math.round((state.balance + action.amount) * 100) / 100
       return {
         ...state,
-        balance: Math.round((state.balance + action.amount) * 100) / 100,
+        balance: newBalance,
         rechargeRecords: [{ id, date: fmtDate(), amount: action.amount, method: action.method, status: 'Completed' }, ...state.rechargeRecords],
         transactions: [{ id: id + 1, date: fmtDateTime().slice(0, 16), type: '充值', amount: action.amount, desc: action.method + '充值' }, ...state.transactions],
+        adminStats: state.adminStats.map((s) =>
+          s.key === 'account_balance' ? { ...s, value: `$${newBalance.toFixed(2)}` } : s
+        ),
       }
     }
 
@@ -549,9 +557,33 @@ function getStorageKey(): string {
 function loadState(): DashboardState | null {
   try {
     const raw = localStorage.getItem(getStorageKey())
-    if (raw) return JSON.parse(raw)
+    if (raw) return migrateState(JSON.parse(raw))
   } catch {}
   return null
+}
+
+function migrateState(state: DashboardState): DashboardState {
+  let migrated = false
+  const adminStats = state.adminStats.map((s) => {
+    if (s.key === 'total_revenue') {
+      migrated = true
+      return { key: 'account_balance' as const, label: '账户余额', value: `$${state.balance.toFixed(2)}`, editable: true }
+    }
+    if ((s.key === 'account_balance' || s.key === 'monthly_cost') && s.editable !== true) {
+      migrated = true
+      return { ...s, editable: true }
+    }
+    return s
+  })
+  const hasMonthlyCost = adminStats.some((s) => s.key === 'monthly_cost')
+  if (!hasMonthlyCost) {
+    migrated = true
+    const m = new Date().getMonth()
+    const monthlyCost = state.monthlyData[m]?.cost ?? 0
+    adminStats.push({ key: 'monthly_cost', label: '本月费用', value: `$${monthlyCost.toFixed(2)}`, editable: true })
+  }
+  if (migrated) return { ...state, adminStats }
+  return state
 }
 
 function saveState(state: DashboardState) {
