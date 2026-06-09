@@ -267,6 +267,61 @@ function createInitialState(): DashboardState {
   }
 }
 
+function createEmptyState(): DashboardState {
+  const now = new Date()
+  const todayLabel = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
+
+  return {
+    balance: 0,
+    totalTokensUsed: 0,
+    totalApiCalls: 0,
+    activeModels: 0,
+    isRealTimeActive: false,
+    tickCount: 0,
+    dailyData: [{ label: todayLabel, tokens: 0, calls: 0, cost: 0 }],
+    hourlyData: Array(24).fill(0),
+    monthlyData: [
+      { label: '1月', tokens: 0, calls: 0, cost: 0 },
+      { label: '2月', tokens: 0, calls: 0, cost: 0 },
+      { label: '3月', tokens: 0, calls: 0, cost: 0 },
+      { label: '4月', tokens: 0, calls: 0, cost: 0 },
+      { label: '5月', tokens: 0, calls: 0, cost: 0 },
+      { label: '6月', tokens: 0, calls: 0, cost: 0 },
+    ],
+    tokenTrend: Array(10).fill(0),
+    apiCallTrend: Array(10).fill(0),
+    modelUsage: [
+      { model: 'gpt-4o', tokens: 0, pct: 0 },
+      { model: 'claude-opus-4', tokens: 0, pct: 0 },
+      { model: 'deepseek-v3', tokens: 0, pct: 0 },
+      { model: 'gemini-2.5-pro', tokens: 0, pct: 0 },
+      { model: 'claude-sonnet-4', tokens: 0, pct: 0 },
+      { model: 'gpt-4o-mini', tokens: 0, pct: 0 },
+      { model: '其他', tokens: 0, pct: 0 },
+    ],
+    recentRequests: [],
+    billingRecords: [],
+    rechargeRecords: [],
+    transactions: [],
+    apiKeys: [],
+    adminStats: [
+      { key: 'total_users', label: '总用户数', value: '1', editable: true },
+      { key: 'total_tokens', label: '总 tokens 用量', value: '0', editable: true },
+      { key: 'total_revenue', label: '总收入', value: '$0.00', editable: true },
+      { key: 'active_models', label: '活跃模型数', value: '0', editable: true },
+      { key: 'api_calls_today', label: '今日 API 调用', value: '0', editable: true },
+      { key: 'avg_response_time', label: '平均响应时间', value: '0ms', editable: true },
+    ],
+    dataCategories: [
+      { name: '用户数据', count: '1 条', size: '0 KB' },
+      { name: 'API 日志', count: '0 条', size: '0 KB' },
+      { name: '账单记录', count: '0 条', size: '0 KB' },
+      { name: '模型配置', count: '0 条', size: '0 KB' },
+      { name: '系统日志', count: '0 条', size: '0 KB' },
+    ],
+  }
+}
+
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
 function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
@@ -478,11 +533,22 @@ interface DashboardCtx {
   dispatch: Dispatch<DashboardAction>
 }
 
-const STORAGE_KEY = 'spenx-gpt-dashboard-state'
+const STORAGE_PREFIX = 'spenx-dash-'
+
+function getCurrentUser(): string {
+  if (typeof document === 'undefined') return ''
+  const match = document.cookie.match(/(?:^|;\s*)spenx-user=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+function getStorageKey(): string {
+  const user = getCurrentUser()
+  return STORAGE_PREFIX + (user || 'anonymous')
+}
 
 function loadState(): DashboardState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(getStorageKey())
     if (raw) return JSON.parse(raw)
   } catch {}
   return null
@@ -490,7 +556,7 @@ function loadState(): DashboardState | null {
 
 function saveState(state: DashboardState) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(getStorageKey(), JSON.stringify(state))
   } catch {}
 }
 
@@ -498,7 +564,10 @@ const DashboardContext = createContext<DashboardCtx | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(dashboardReducer, undefined, () => {
-    return loadState() || createInitialState()
+    const saved = loadState()
+    if (saved) return saved
+    const user = getCurrentUser()
+    return user === 'admin' ? createInitialState() : createEmptyState()
   })
 
   useEffect(() => {

@@ -47,6 +47,7 @@ export default function LoginPage() {
     setLoading(true)
 
     if (validate(username, password)) {
+      document.cookie = `spenx-user=${encodeURIComponent(username)};path=/;max-age=86400`
       document.cookie = 'token=demo;path=/;max-age=86400'
       router.push('/dashboard')
     } else {
