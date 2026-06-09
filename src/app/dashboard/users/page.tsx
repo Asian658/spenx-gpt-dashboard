@@ -1,23 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
-interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  status: string
-  created: string
+interface StoredUser {
+  username: string
+  password: string
+  email?: string
+  role?: string
+  status?: string
+  created?: string
 }
 
-const initialUsers: User[] = [
-  { id: 1, name: 'Admin', email: 'admin@example.com', role: '管理员', status: 'active', created: '2026-01-15' },
-  { id: 2, name: '张三', email: 'zhangsan@example.com', role: '用户', status: 'active', created: '2026-03-20' },
-  { id: 3, name: '李四', email: 'lisi@example.com', role: '用户', status: 'active', created: '2026-04-10' },
-  { id: 4, name: '王五', email: 'wangwu@example.com', role: '观察者', status: 'disabled', created: '2026-05-05' },
-]
+const USERS_KEY = 'spenx-users'
+
+function loadUsers(): StoredUser[] {
+  try {
+    const raw = localStorage.getItem(USERS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveUsers(users: StoredUser[]) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+}
 
 function EditableCell({ value, onSave, options }: { value: string; onSave: (v: string) => void; options?: string[] }) {
   const [editing, setEditing] = useState(false)
@@ -63,44 +69,53 @@ function EditableCell({ value, onSave, options }: { value: string; onSave: (v: s
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers)
+  const [users, setUsers] = useState<StoredUser[]>([])
+  const [mounted, setMounted] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editField, setEditField] = useState('')
-  const [editValue, setEditValue] = useState('')
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: '用户' })
+  const [newUser, setNewUser] = useState({ username: '', password: '', email: '', role: '用户' })
+
+  useEffect(() => {
+    setUsers(loadUsers())
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) saveUsers(users)
+  }, [users, mounted])
 
   function handleAdd() {
-    if (!newUser.name || !newUser.email) return
+    if (!newUser.username || !newUser.password) return
     setUsers([
       ...users,
       {
-        id: Date.now(),
-        name: newUser.name,
+        username: newUser.username,
+        password: newUser.password,
         email: newUser.email,
         role: newUser.role,
         status: 'active',
         created: new Date().toISOString().split('T')[0],
       },
     ])
-    setNewUser({ name: '', email: '', role: '用户' })
+    setNewUser({ username: '', password: '', email: '', role: '用户' })
     setShowAdd(false)
   }
 
-  function handleDelete(id: number) {
-    setUsers(users.filter((u) => u.id !== id))
+  function handleDelete(username: string) {
+    setUsers(users.filter((u) => u.username !== username))
   }
 
-  function updateUser(id: number, field: string, value: string) {
-    setUsers(users.map((u) => (u.id === id ? { ...u, [field]: value } : u)))
+  function updateUser(username: string, field: string, value: string) {
+    setUsers(users.map((u) => (u.username === username ? { ...u, [field]: value } : u)))
   }
+
+  if (!mounted) return null
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-zinc-900">用户管理</h1>
-          <p className="text-sm text-zinc-500 mt-1">管理系统用户和权限（点击数值直接编辑）</p>
+          <p className="text-sm text-zinc-500 mt-1">管理注册用户（数据同步至登录系统）</p>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
@@ -114,15 +129,25 @@ export default function UsersPage() {
       {showAdd && (
         <div className="bg-white rounded-xl border border-zinc-200 p-5">
           <h3 className="font-semibold text-zinc-900 text-sm mb-4">新建用户</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm text-zinc-600 mb-1">姓名</label>
+              <label className="block text-sm text-zinc-600 mb-1">用户名</label>
               <input
                 type="text"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                value={newUser.username}
+                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
                 placeholder="用户名"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-600 mb-1">密码</label>
+              <input
+                type="text"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+                placeholder="登录密码"
               />
             </div>
             <div>
@@ -149,16 +174,10 @@ export default function UsersPage() {
             </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleAdd}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800"
-            >
+            <button onClick={handleAdd} className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800">
               确认添加
             </button>
-            <button
-              onClick={() => setShowAdd(false)}
-              className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-sm hover:bg-zinc-200"
-            >
+            <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-sm hover:bg-zinc-200">
               取消
             </button>
           </div>
@@ -169,7 +188,7 @@ export default function UsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-zinc-500 border-b border-zinc-100 bg-zinc-50">
-              <th className="text-left py-3 px-5 font-medium">用户</th>
+              <th className="text-left py-3 px-5 font-medium">用户名</th>
               <th className="text-left py-3 px-5 font-medium">邮箱</th>
               <th className="text-left py-3 px-5 font-medium">角色</th>
               <th className="text-left py-3 px-5 font-medium">状态</th>
@@ -178,41 +197,49 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-b border-zinc-50 hover:bg-zinc-50/50">
-                <td className="py-3 px-5 text-zinc-900 font-medium">
-                  <EditableCell value={user.name} onSave={(v) => updateUser(user.id, 'name', v)} />
-                </td>
-                <td className="py-3 px-5 text-zinc-600">
-                  <EditableCell value={user.email} onSave={(v) => updateUser(user.id, 'email', v)} />
-                </td>
-                <td className="py-3 px-5">
-                  <EditableCell
-                    value={user.role}
-                    onSave={(v) => updateUser(user.id, 'role', v)}
-                    options={['用户', '管理员', '观察者']}
-                  />
-                </td>
-                <td className="py-3 px-5">
-                  <EditableCell
-                    value={user.status === 'active' ? '启用' : '禁用'}
-                    onSave={(v) => updateUser(user.id, 'status', v === '启用' ? 'active' : 'disabled')}
-                    options={['启用', '禁用']}
-                  />
-                </td>
-                <td className="py-3 px-5 text-zinc-500">
-                  <EditableCell value={user.created} onSave={(v) => updateUser(user.id, 'created', v)} />
-                </td>
-                <td className="py-3 px-5 text-right">
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-zinc-400">暂无注册用户</td>
               </tr>
-            ))}
+            ) : (
+              users.map((user) => (
+                <tr key={user.username} className="border-b border-zinc-50 hover:bg-zinc-50/50">
+                  <td className="py-3 px-5 text-zinc-900 font-medium">
+                    <EditableCell value={user.username} onSave={(v) => updateUser(user.username, 'username', v)} />
+                  </td>
+                  <td className="py-3 px-5 text-zinc-600">
+                    <EditableCell value={user.email || '-'} onSave={(v) => updateUser(user.username, 'email', v)} />
+                  </td>
+                  <td className="py-3 px-5">
+                    <EditableCell
+                      value={user.role || '用户'}
+                      onSave={(v) => updateUser(user.username, 'role', v)}
+                      options={['用户', '管理员', '观察者']}
+                    />
+                  </td>
+                  <td className="py-3 px-5">
+                    <EditableCell
+                      value={user.status === 'active' ? '启用' : '禁用'}
+                      onSave={(v) => updateUser(user.username, 'status', v === '启用' ? 'active' : 'disabled')}
+                      options={['启用', '禁用']}
+                    />
+                  </td>
+                  <td className="py-3 px-5 text-zinc-500">
+                    <EditableCell value={user.created || '-'} onSave={(v) => updateUser(user.username, 'created', v)} />
+                  </td>
+                  <td className="py-3 px-5 text-right">
+                    {user.username !== 'admin' && (
+                      <button
+                        onClick={() => handleDelete(user.username)}
+                        className="p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
