@@ -564,63 +564,22 @@ function getStorageKey(): string {
   return STORAGE_PREFIX + (user || 'anonymous')
 }
 
+const DATA_VERSION = 2
+
 function loadState(): DashboardState | null {
   try {
     const raw = localStorage.getItem(getStorageKey())
-    if (raw) return migrateState(JSON.parse(raw))
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed._v !== DATA_VERSION) return null
+    return parsed
   } catch {}
   return null
 }
 
-function migrateState(state: DashboardState): DashboardState {
-  let migrated = false
-  const adminStats = state.adminStats.map((s) => {
-    if (s.key === 'total_revenue') {
-      migrated = true
-      return { key: 'account_balance' as const, label: '账户余额', value: `$${state.balance.toFixed(2)}`, editable: true }
-    }
-    if ((s.key === 'account_balance' || s.key === 'monthly_cost') && s.editable !== true) {
-      migrated = true
-      return { ...s, editable: true }
-    }
-    return s
-  })
-  const hasMonthlyCost = adminStats.some((s) => s.key === 'monthly_cost')
-  if (!hasMonthlyCost) {
-    migrated = true
-    const m = new Date().getMonth()
-    const monthlyCost = state.monthlyData[m]?.cost ?? 0
-    adminStats.push({ key: 'monthly_cost', label: '本月费用', value: `$${monthlyCost.toFixed(2)}`, editable: true })
-  }
-
-  const oldMethods = ['Alipay', 'WeChat Pay', 'Bank Card']
-  const hasOldRecharge = state.rechargeRecords.some((r) => oldMethods.includes(r.method))
-  if (hasOldRecharge) {
-    migrated = true
-  }
-
-  if (migrated) {
-    const newRecharge = hasOldRecharge
-      ? [
-          { id: 1, date: '2026-06-08', amount: 500, method: '支付宝', status: '已完成' },
-          { id: 2, date: '2026-06-03', amount: 200, method: '微信支付', status: '已完成' },
-          { id: 3, date: '2026-05-28', amount: 1000, method: '银行转账', status: '已完成' },
-          { id: 4, date: '2026-05-20', amount: 300, method: '支付宝', status: '已完成' },
-          { id: 5, date: '2026-05-12', amount: 500, method: '微信支付', status: '已完成' },
-          { id: 6, date: '2026-05-05', amount: 200, method: 'PayPal', status: '处理中' },
-          { id: 7, date: '2026-04-28', amount: 1000, method: '银行转账', status: '已完成' },
-          { id: 8, date: '2026-04-15', amount: 300, method: '支付宝', status: '已退款' },
-          { id: 9, date: '2026-04-01', amount: 500, method: '微信支付', status: '已完成' },
-        ]
-      : state.rechargeRecords
-    return { ...state, adminStats, rechargeRecords: newRecharge }
-  }
-  return state
-}
-
 function saveState(state: DashboardState) {
   try {
-    localStorage.setItem(getStorageKey(), JSON.stringify(state))
+    localStorage.setItem(getStorageKey(), JSON.stringify({ _v: DATA_VERSION, ...state }))
   } catch {}
 }
 
