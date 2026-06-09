@@ -375,11 +375,8 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
       const apiCallTrend = [...state.apiCallTrend.slice(1), 1]
 
       const adminStats = state.adminStats.map((s) => {
-        if (s.key === 'total_tokens') return { ...s, value: fmtNum(newTokens) }
         if (s.key === 'account_balance') return { ...s, value: `$${newBalance.toFixed(2)}` }
         if (s.key === 'monthly_cost') return { ...s, value: `$${monthlyData[monthIdx].cost.toFixed(2)}` }
-        if (s.key === 'api_calls_today') return { ...s, value: fmtNum(newCalls) }
-        if (s.key === 'active_models') return { ...s, value: String(modelUsage.filter((m) => m.tokens > 0).length) }
         return s
       })
 
