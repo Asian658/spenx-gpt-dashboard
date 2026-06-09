@@ -68,7 +68,15 @@ export default function AdminPage() {
   }
 
   function saveEdit(key: string) {
-    dispatch({ type: 'UPDATE_ADMIN_STAT', key, value: editValue })
+    if (key === 'account_balance') {
+      const v = parseFloat(editValue.replace('$', ''))
+      if (!isNaN(v)) dispatch({ type: 'SET_BALANCE', value: v })
+    } else if (key === 'monthly_cost') {
+      const v = parseFloat(editValue.replace('$', ''))
+      if (!isNaN(v)) dispatch({ type: 'SET_MONTHLY_COST', value: v })
+    } else {
+      dispatch({ type: 'UPDATE_ADMIN_STAT', key, value: editValue })
+    }
     setEditing(null)
   }
 
@@ -122,7 +130,11 @@ export default function AdminPage() {
       <div className="bg-white rounded-xl border border-zinc-200 p-5">
         <h3 className="font-semibold text-zinc-900 text-sm mb-4">统计参数</h3>
         <div className="grid grid-cols-3 gap-4">
-          {state.adminStats.map((stat) => (
+          {state.adminStats.map((stat) => {
+            let displayValue = stat.value
+            if (stat.key === 'account_balance') displayValue = `$${state.balance.toFixed(2)}`
+            if (stat.key === 'monthly_cost') displayValue = `$${(state.monthlyData[new Date().getMonth()]?.cost ?? 0).toFixed(2)}`
+            return (
             <div key={stat.key} className="border border-zinc-200 rounded-lg p-4">
               <div className="text-xs text-zinc-500 mb-1">{stat.label}</div>
               {editing === stat.key ? (
@@ -139,14 +151,14 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-zinc-900">{stat.value}</span>
+                  <span className="text-lg font-bold text-zinc-900">{displayValue}</span>
                   {stat.editable && (
-                    <button onClick={() => startEdit(stat.key, stat.value)} className="text-xs text-zinc-400 hover:text-zinc-600">编辑</button>
+                    <button onClick={() => startEdit(stat.key, displayValue)} className="text-xs text-zinc-400 hover:text-zinc-600">编辑</button>
                   )}
                 </div>
               )}
             </div>
-          ))}
+            )})}
         </div>
       </div>
 

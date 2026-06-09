@@ -8,7 +8,7 @@ export default function WalletPage() {
   const { state, dispatch } = useDashboard()
   const [showAdd, setShowAdd] = useState(false)
   const [amount, setAmount] = useState('')
-  const [method, setMethod] = useState('Alipay')
+  const [method, setMethod] = useState('支付宝')
 
   const monthlySpend = state.transactions
     .filter((tx) => tx.type === '消费')
@@ -54,9 +54,9 @@ export default function WalletPage() {
               onChange={(e) => setMethod(e.target.value)}
               className="px-3 py-2 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
             >
-              <option>Alipay</option>
-              <option>WeChat Pay</option>
-              <option>Bank Card</option>
+              <option>支付宝</option>
+              <option>微信支付</option>
+              <option>银行转账</option>
               <option>PayPal</option>
             </select>
             <button

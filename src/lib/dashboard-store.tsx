@@ -120,6 +120,8 @@ export type DashboardAction =
   | { type: 'UPDATE_DATA_CATEGORY'; name: string; field: string; value: string }
   | { type: 'UPDATE_HOURLY_DATA'; index: number; value: number }
   | { type: 'UPDATE_MODEL_USAGE'; model: string; field: string; value: string }
+  | { type: 'SET_BALANCE'; value: number }
+  | { type: 'SET_MONTHLY_COST'; value: number }
   | { type: 'LOAD_STATE'; state: DashboardState }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
@@ -198,10 +200,15 @@ function createInitialState(): DashboardState {
   ]
 
   const rechargeRecords: RechargeRecord[] = [
-    { id: 1, date: '2026-06-01', amount: 100, method: 'Alipay', status: 'Completed' },
-    { id: 2, date: '2026-05-15', amount: 50, method: 'WeChat Pay', status: 'Completed' },
-    { id: 3, date: '2026-05-01', amount: 200, method: 'Alipay', status: 'Completed' },
-    { id: 4, date: '2026-04-15', amount: 100, method: 'Bank Card', status: 'Completed' },
+    { id: 1, date: '2026-06-08', amount: 500, method: '支付宝', status: '已完成' },
+    { id: 2, date: '2026-06-03', amount: 200, method: '微信支付', status: '已完成' },
+    { id: 3, date: '2026-05-28', amount: 1000, method: '银行转账', status: '已完成' },
+    { id: 4, date: '2026-05-20', amount: 300, method: '支付宝', status: '已完成' },
+    { id: 5, date: '2026-05-12', amount: 500, method: '微信支付', status: '已完成' },
+    { id: 6, date: '2026-05-05', amount: 200, method: 'PayPal', status: '处理中' },
+    { id: 7, date: '2026-04-28', amount: 1000, method: '银行转账', status: '已完成' },
+    { id: 8, date: '2026-04-15', amount: 300, method: '支付宝', status: '已退款' },
+    { id: 9, date: '2026-04-01', amount: 500, method: '微信支付', status: '已完成' },
   ]
 
   const transactions: Transaction[] = [
@@ -514,8 +521,21 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
       return {
         ...state,
         balance: newBalance,
-        rechargeRecords: [{ id, date: fmtDate(), amount: action.amount, method: action.method, status: 'Completed' }, ...state.rechargeRecords],
+        rechargeRecords: [{ id, date: fmtDate(), amount: action.amount, method: action.method, status: '已完成' }, ...state.rechargeRecords],
         transactions: [{ id: id + 1, date: fmtDateTime().slice(0, 16), type: '充值', amount: action.amount, desc: action.method + '充值' }, ...state.transactions],
+      }
+    }
+
+    case 'SET_BALANCE':
+      return { ...state, balance: action.value }
+
+    case 'SET_MONTHLY_COST': {
+      const mi = new Date().getMonth()
+      return {
+        ...state,
+        monthlyData: state.monthlyData.map((m, i) =>
+          i === mi ? { ...m, cost: action.value } : m
+        ),
       }
     }
 
@@ -595,13 +615,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveState(state)
   }, [state])
-
-  useEffect(() => {
-    const m = new Date().getMonth()
-    const monthlyCost = state.monthlyData[m]?.cost ?? 0
-    dispatch({ type: 'UPDATE_ADMIN_STAT', key: 'account_balance', value: `$${state.balance.toFixed(2)}` })
-    dispatch({ type: 'UPDATE_ADMIN_STAT', key: 'monthly_cost', value: `$${monthlyCost.toFixed(2)}` })
-  }, [state.balance, state.monthlyData])
 
   useEffect(() => {
     if (!state.isRealTimeActive) return
